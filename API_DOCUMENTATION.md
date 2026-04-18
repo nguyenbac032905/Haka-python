@@ -25,6 +25,8 @@ python main.py
 
 - `accounts`
 - `users`
+- `carts`
+- `cart_items`
 - `product_categories`
 - `products`
 - `orders`
@@ -44,12 +46,16 @@ Các API cũ không còn dùng bởi frontend đã bị bỏ:
 
 - `controllers/accountController.py`
 - `controllers/userController.py`
+- `controllers/cartController.py`
+- `controllers/cartItemController.py`
 - `controllers/productController.py`
 - `controllers/productCategoryController.py`
 - `controllers/orderController.py`
 - `controllers/orderItemController.py`
 - `routes/accountRoute.py`
 - `routes/userRoute.py`
+- `routes/cartRoute.py`
+- `routes/cartItemRoute.py`
 - `routes/productRoute.py`
 - `routes/productCategoryRoute.py`
 - `routes/orderRoute.py`

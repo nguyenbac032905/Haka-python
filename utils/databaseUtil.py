@@ -11,6 +11,8 @@ TABLE_ALIASES = {
 ALLOWED_TABLES = {
     "accounts",
     "users",
+    "carts",
+    "cart_items",
     "product_categories",
     "products",
     "orders",
