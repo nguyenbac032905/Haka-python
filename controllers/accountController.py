@@ -6,24 +6,24 @@ from controllers.resourceController import (
     patch_record,
 )
 
-RESOURCE_NAME = "products"
+RESOURCE_NAME = "accounts"
 
 
-def list_products():
+def list_accounts():
     return list_records(RESOURCE_NAME)
 
 
-def create_product():
+def create_account():
     return create_record(RESOURCE_NAME)
 
 
-def get_product(item_id):
+def get_account(item_id):
     return get_record(RESOURCE_NAME, item_id)
 
 
-def patch_product(item_id):
+def patch_account(item_id):
     return patch_record(RESOURCE_NAME, item_id)
 
 
-def delete_product(item_id):
+def delete_account(item_id):
     return delete_record(RESOURCE_NAME, item_id)

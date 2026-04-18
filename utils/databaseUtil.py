@@ -13,11 +13,8 @@ ALLOWED_TABLES = {
     "users",
     "product_categories",
     "products",
-    "carts",
-    "cart_items",
     "orders",
     "order_items",
-    "comments",
 }
 
 
