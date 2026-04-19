@@ -19,16 +19,30 @@ ALLOWED_TABLES = {
     "order_items",
 }
 
+import sqlite3
+import time
 
 def execute_query(command, params=()):
-    """Dùng cho INSERT, UPDATE, DELETE và trả về lastrowid."""
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(command, params)
-    conn.commit()
-    last_id = cursor.lastrowid
-    conn.close()
-    return last_id
+
+    try:
+        cursor = conn.cursor()
+
+        # 🔥 retry nếu bị lock
+        for i in range(3):
+            try:
+                cursor.execute(command, params)
+                conn.commit()
+                return cursor.lastrowid
+            except sqlite3.OperationalError as e:
+                if "locked" in str(e):
+                    time.sleep(0.1)  # đợi nhẹ rồi retry
+                else:
+                    raise
+        raise Exception("DB still locked after retry")
+
+    finally:
+        conn.close()
 
 
 def execute_non_query(command, params=()):

@@ -199,14 +199,43 @@ def create_record(table, read_aliases=None, write_aliases=None):
     if not isinstance(payload, dict):
         return error_response("Body phải là JSON object", 400)
 
+    print("PAYLOAD:", payload)
+
     column_map = get_column_map(table_name)
     insert_data = {}
 
     for raw_key, value in payload.items():
         key = to_db_field(raw_key, write_aliases)
+
         if key == "id" or key not in column_map:
             continue
-        insert_data[key] = cast_column_value(value, column_map[key]["type"])
+
+        col_type = (column_map[key]["type"] or "").upper()
+
+        # =========================
+        # FIX CHÍNH Ở ĐÂY
+        # =========================
+
+        # Chỉ parse bool nếu column thực sự là BOOLEAN
+        if "BOOL" in col_type:
+            value = parse_bool_like(value)
+        else:
+            # KHÔNG bao giờ convert bool cho INT nữa
+            if "INT" in col_type:
+                try:
+                    value = int(value)
+                except (TypeError, ValueError):
+                    pass
+            elif any(t in col_type for t in ["REAL", "FLOA", "DOUB", "NUMERIC", "DECIMAL"]):
+                try:
+                    value = float(value)
+                except (TypeError, ValueError):
+                    pass
+
+        insert_data[key] = value
+
+    print("INSERT DATA:", insert_data)
+    print("TABLE:", table_name)
 
     if (
         "status" in column_map
@@ -214,6 +243,7 @@ def create_record(table, read_aliases=None, write_aliases=None):
         and column_map["status"].get("default_value") is None
     ):
         insert_data["status"] = "active"
+
     if "deleted" in column_map and "deleted" not in insert_data:
         insert_data["deleted"] = 0
 
@@ -221,12 +251,15 @@ def create_record(table, read_aliases=None, write_aliases=None):
         if insert_data:
             columns_sql = ", ".join(insert_data.keys())
             placeholders = ", ".join(["?"] * len(insert_data))
-            last_id = execute_query(
-                f"INSERT INTO {table_name} ({columns_sql}) VALUES ({placeholders})",
-                tuple(insert_data.values()),
-            )
+
+            sql = f"INSERT INTO {table_name} ({columns_sql}) VALUES ({placeholders})"
+            print("INSERT SQL:", sql)
+            print("VALUES:", tuple(insert_data.values()))
+
+            last_id = execute_query(sql, tuple(insert_data.values()))
         else:
             last_id = execute_query(f"INSERT INTO {table_name} DEFAULT VALUES")
+
     except sqlite3.IntegrityError as error:
         return error_response(f"Lỗi dữ liệu: {error}", 400)
 
@@ -247,14 +280,47 @@ def patch_record(table, item_id, read_aliases=None, write_aliases=None):
     if not isinstance(payload, dict) or not payload:
         return error_response("Body phải là JSON object và có ít nhất 1 field", 400)
 
+    print("PAYLOAD:", payload)
+
     column_map = get_column_map(table_name)
     update_data = {}
 
     for raw_key, value in payload.items():
         key = to_db_field(raw_key, write_aliases)
+
         if key == "id" or key not in column_map:
+            print("[SKIP]", raw_key, "->", key)
             continue
-        update_data[key] = cast_column_value(value, column_map[key]["type"])
+
+        col_type = (column_map[key]["type"] or "").upper()
+
+        try:
+            # =========================
+            # FIX CHÍNH Ở ĐÂY (giống create)
+            # =========================
+            if "BOOL" in col_type:
+                casted = parse_bool_like(value)
+            else:
+                if "INT" in col_type:
+                    try:
+                        casted = int(value)
+                    except (TypeError, ValueError):
+                        casted = value
+                elif any(t in col_type for t in ["REAL", "FLOA", "DOUB", "NUMERIC", "DECIMAL"]):
+                    try:
+                        casted = float(value)
+                    except (TypeError, ValueError):
+                        casted = value
+                else:
+                    casted = value
+
+        except Exception as e:
+            print("[CAST ERROR]", key, value, e)
+            casted = value
+
+        print("DEBUG:", key, "| raw:", value, "| casted:", casted)
+
+        update_data[key] = casted
 
     if not update_data:
         return error_response("Không có field hợp lệ để cập nhật", 400)
@@ -266,6 +332,8 @@ def patch_record(table, item_id, read_aliases=None, write_aliases=None):
         assignments.append("updatedAt = CURRENT_TIMESTAMP")
 
     params.append(item_id)
+
+    print("UPDATE DATA:", update_data)
 
     try:
         execute_non_query(
